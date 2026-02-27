@@ -1,9 +1,8 @@
-name: Build Citizens2
+name: Build Citizens2 with NMS
 
 on:
   push:
-    branches: [ main, master, develop ]
-    tags: [ 'v*' ]
+    branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
 
@@ -12,32 +11,50 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       
-    - name: Set up JDK 17
+    - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
-        cache: maven
         
-    - name: Build with Maven
-      run: mvn clean package --batch-mode --file pom.xml
+    - name: Cache Maven packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+        
+    - name: Cache BuildTools
+      uses: actions/cache@v3
+      with:
+        path: ~/.BuildTools
+        key: buildtools-1.21.11
+        
+    - name: Setup BuildTools (生成Spigot依赖)
+      run: |
+        mkdir -p ~/.BuildTools && cd ~/.BuildTools
+        if [ ! -f BuildTools.jar ]; then
+          wget -O BuildTools.jar https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
+        fi
+        # 构建Spigot 1.21.11
+        java -jar BuildTools.jar --rev 1.21.11 --compile SPIGOT
+        
+    - name: Install Spigot to local Maven
+      run: |
+        cd ~/.BuildTools/spigot-1.21.11
+        mvn install:install-file -Dfile=spigot-1.21.11-R0.1-SNAPSHOT.jar \
+          -DgroupId=org.spigotmc \
+          -DartifactId=spigot \
+          -Dversion=1.21.11-R0.1-SNAPSHOT \
+          -Dpackaging=jar
+        
+    - name: Build Project
+      run: mvn clean package --batch-mode
       
-    - name: Run tests
-      run: mvn test --batch-mode
-      
-    - name: Upload artifact
+    - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Citizens2-Plugin
+        name: Citizens2-JAR
         path: target/*.jar
-        
-    - name: Upload to Release (if tagged)
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: target/Citizens-*.jar
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
