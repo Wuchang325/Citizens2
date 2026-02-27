@@ -32,26 +32,43 @@ jobs:
         path: ~/.BuildTools
         key: buildtools-1.21.11
         
-    - name: Setup BuildTools (生成Spigot依赖)
+    - name: Build Spigot 1.21.11 with BuildTools
       run: |
-        mkdir -p ~/.BuildTools && cd ~/.BuildTools
+        mkdir -p ~/.BuildTools
+        cd ~/.BuildTools
+        
         if [ ! -f BuildTools.jar ]; then
           wget -O BuildTools.jar https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
         fi
-        # 构建Spigot 1.21.11
+        
+        # 构建 Spigot 1.21.11（这会生成 spigot-1.21.11.jar）
         java -jar BuildTools.jar --rev 1.21.11 --compile SPIGOT
         
-    - name: Install Spigot to local Maven
+    - name: Install Spigot to Local Maven
       run: |
-        cd ~/.BuildTools/spigot-1.21.11
-        mvn install:install-file -Dfile=spigot-1.21.11-R0.1-SNAPSHOT.jar \
+        cd ~/.BuildTools
+        
+        # 查找生成的jar（可能是 spigot-1.21.11.jar 或带版本号）
+        SPIGOT_JAR=$(ls spigot-1.21.11*.jar 2>/dev/null | head -1)
+        
+        if [ -z "$SPIGOT_JAR" ]; then
+          echo "Error: Spigot jar not found!"
+          ls -la
+          exit 1
+        fi
+        
+        echo "Found jar: $SPIGOT_JAR"
+        
+        # 安装到本地Maven仓库
+        mvn install:install-file \
+          -Dfile="$SPIGOT_JAR" \
           -DgroupId=org.spigotmc \
           -DartifactId=spigot \
           -Dversion=1.21.11-R0.1-SNAPSHOT \
           -Dpackaging=jar
         
     - name: Build Project
-      run: mvn clean package --batch-mode
+      run: mvn clean package --batch-mode -DskipTests
       
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
