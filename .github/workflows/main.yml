@@ -1,4 +1,4 @@
-name: Build Citizens2 with NMS
+name: Build Citizens2
 
 on:
   push:
@@ -30,9 +30,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.BuildTools
-        key: buildtools-1.21.11
+        key: buildtools-all-versions
         
-    - name: Build Spigot 1.21.11 with BuildTools
+    - name: Build Spigot Dependencies (多版本)
       run: |
         mkdir -p ~/.BuildTools
         cd ~/.BuildTools
@@ -41,34 +41,50 @@ jobs:
           wget -O BuildTools.jar https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
         fi
         
-        # 构建 Spigot 1.21.11（这会生成 spigot-1.21.11.jar）
-        java -jar BuildTools.jar --rev 1.21.11 --compile SPIGOT
+        # 构建 1.21.8 (remapped-mojang)
+        java -jar BuildTools.jar --rev 1.21.8 --remapped --compile SPIGOT
         
-    - name: Install Spigot to Local Maven
+        # 如果需要1.21.11也在这里构建
+        # java -jar BuildTools.jar --rev 1.21.11 --remapped --compile SPIGOT
+        
+    - name: Install Spigot to Maven (Remapped)
       run: |
         cd ~/.BuildTools
         
-        # 查找生成的jar（可能是 spigot-1.21.11.jar 或带版本号）
-        SPIGOT_JAR=$(ls spigot-1.21.11*.jar 2>/dev/null | head -1)
-        
-        if [ -z "$SPIGOT_JAR" ]; then
-          echo "Error: Spigot jar not found!"
-          ls -la
-          exit 1
-        fi
-        
-        echo "Found jar: $SPIGOT_JAR"
-        
-        # 安装到本地Maven仓库
+        # 安装remapped-mojang版本
         mvn install:install-file \
-          -Dfile="$SPIGOT_JAR" \
+          -Dfile=spigot-1.21.8-R0.1-SNAPSHOT-remapped-mojang.jar \
           -DgroupId=org.spigotmc \
           -DartifactId=spigot \
-          -Dversion=1.21.11-R0.1-SNAPSHOT \
+          -Dversion=1.21.8-R0.1-SNAPSHOT \
+          -Dclassifier=remapped-mojang \
           -Dpackaging=jar
         
+        # 同时安装标准版本（某些依赖可能需要）
+        mvn install:install-file \
+          -Dfile=spigot-1.21.8-R0.1-SNAPSHOT.jar \
+          -DgroupId=org.spigotmc \
+          -DartifactId=spigot \
+          -Dversion=1.21.8-R0.1-SNAPSHOT \
+          -Dpackaging=jar
+          
+        # 如果还需要obf版本
+        if [ -f spigot-1.21.8-R0.1-SNAPSHOT-obf.jar ]; then
+          mvn install:install-file \
+            -Dfile=spigot-1.21.8-R0.1-SNAPSHOT-obf.jar \
+            -DgroupId=org.spigotmc \
+            -DartifactId=spigot \
+            -Dversion=1.21.8-R0.1-SNAPSHOT \
+            -Dclassifier=obf \
+            -Dpackaging=jar
+        fi
+        
+    - name: Debug Installed Files
+      run: |
+        ls -la ~/.m2/repository/org/spigotmc/spigot/1.21.8-R0.1-SNAPSHOT/
+        
     - name: Build Project
-      run: mvn clean package --batch-mode -DskipTests
+      run: mvn clean package --batch-mode
       
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
