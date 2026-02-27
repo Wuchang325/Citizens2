@@ -32,71 +32,71 @@ jobs:
         path: ~/.BuildTools
         key: buildtools-multi-version
         
-    - name: Build Spigot Dependencies
+    - name: Build & Install Spigot 1.21.8
       run: |
-        mkdir -p ~/.BuildTools
         cd ~/.BuildTools
-        
         if [ ! -f BuildTools.jar ]; then
           wget -O BuildTools.jar https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
         fi
         
-        # 构建所有需要的版本（带remapped参数）
+        # 构建
         java -jar BuildTools.jar --rev 1.21.8 --remapped
-        java -jar BuildTools.jar --rev 1.21.10 --remapped  
+        
+        # 立即安装（remapped在target目录）
+        mvn install:install-file \
+          -Dfile=Spigot/Spigot-Server/target/spigot-1.21.8-R0.1-SNAPSHOT-remapped-mojang.jar \
+          -DgroupId=org.spigotmc \
+          -DartifactId=spigot \
+          -Dversion=1.21.8-R0.1-SNAPSHOT \
+          -Dclassifier=remapped-mojang \
+          -Dpackaging=jar
+          
+        mvn install:install-file \
+          -Dfile=spigot-1.21.8.jar \
+          -DgroupId=org.spigotmc \
+          -DartifactId=spigot \
+          -Dversion=1.21.8-R0.1-SNAPSHOT \
+          -Dpackaging=jar
+        
+    - name: Build & Install Spigot 1.21.10
+      run: |
+        cd ~/.BuildTools
+        java -jar BuildTools.jar --rev 1.21.10 --remapped
+        
+        mvn install:install-file \
+          -Dfile=Spigot/Spigot-Server/target/spigot-1.21.10-R0.1-SNAPSHOT-remapped-mojang.jar \
+          -DgroupId=org.spigotmc \
+          -DartifactId=spigot \
+          -Dversion=1.21.10-R0.1-SNAPSHOT \
+          -Dclassifier=remapped-mojang \
+          -Dpackaging=jar
+          
+        mvn install:install-file \
+          -Dfile=spigot-1.21.10.jar \
+          -DgroupId=org.spigotmc \
+          -DartifactId=spigot \
+          -Dversion=1.21.10-R0.1-SNAPSHOT \
+          -Dpackaging=jar
+        
+    - name: Build & Install Spigot 1.21.11
+      run: |
+        cd ~/.BuildTools
         java -jar BuildTools.jar --rev 1.21.11 --remapped
         
-    - name: Debug BuildTools Output
-      run: |
-        cd ~/.BuildTools
-        echo "=== Root Directory ==="
-        ls -lah *.jar 2>/dev/null || echo "No jars in root"
-        echo "=== Spigot Server Target ==="
-        ls -lah Spigot/Spigot-Server/target/*.jar 2>/dev/null || echo "No server jars"
-        echo "=== Find all remapped jars ==="
-        find . -name "*remapped*.jar" -type f
-        
-    - name: Install Spigot to Maven (1.21.8)
-      run: |
-        cd ~/.BuildTools
-        # 尝试多个可能的路径
-        if [ -f "spigot-1.21.8-R0.1-SNAPSHOT-remapped-mojang.jar" ]; then
-          REMAPPED="spigot-1.21.8-R0.1-SNAPSHOT-remapped-mojang.jar"
-          NORMAL="spigot-1.21.8-R0.1-SNAPSHOT.jar"
-        else
-          REMAPPED=$(find . -name "spigot-1.21.8*remapped-mojang.jar" | head -1)
-          NORMAL=$(find . -name "spigot-1.21.8*.jar" ! -name "*remapped*" ! -name "*sources*" | head -1)
-        fi
-        
-        echo "Installing 1.21.8 remapped: $REMAPPED"
-        mvn install:install-file -Dfile="$REMAPPED" -DgroupId=org.spigotmc -DartifactId=spigot -Dversion=1.21.8-R0.1-SNAPSHOT -Dclassifier=remapped-mojang -Dpackaging=jar
-        
-        echo "Installing 1.21.8 normal: $NORMAL"  
-        mvn install:install-file -Dfile="$NORMAL" -DgroupId=org.spigotmc -DartifactId=spigot -Dversion=1.21.8-R0.1-SNAPSHOT -Dpackaging=jar
-        
-    - name: Install Spigot to Maven (1.21.10)
-      run: |
-        cd ~/.BuildTools
-        REMAPPED=$(find . -name "spigot-1.21.10*remapped-mojang.jar" | head -1)
-        NORMAL=$(find . -name "spigot-1.21.10*.jar" ! -name "*remapped*" ! -name "*sources*" | head -1)
-        
-        echo "Installing 1.21.10 remapped: $REMAPPED"
-        mvn install:install-file -Dfile="$REMAPPED" -DgroupId=org.spigotmc -DartifactId=spigot -Dversion=1.21.10-R0.1-SNAPSHOT -Dclassifier=remapped-mojang -Dpackaging=jar
-        
-        echo "Installing 1.21.10 normal: $NORMAL"
-        mvn install:install-file -Dfile="$NORMAL" -DgroupId=org.spigotmc -DartifactId=spigot -Dversion=1.21.10-R0.1-SNAPSHOT -Dpackaging=jar
-        
-    - name: Install Spigot to Maven (1.21.11)
-      run: |
-        cd ~/.BuildTools
-        REMAPPED=$(find . -name "spigot-1.21.11*remapped-mojang.jar" | head -1)
-        NORMAL=$(find . -name "spigot-1.21.11*.jar" ! -name "*remapped*" ! -name "*sources*" | head -1)
-        
-        echo "Installing 1.21.11 remapped: $REMAPPED"
-        mvn install:install-file -Dfile="$REMAPPED" -DgroupId=org.spigotmc -DartifactId=spigot -Dversion=1.21.11-R0.2-SNAPSHOT -Dclassifier=remapped-mojang -Dpackaging=jar
-        
-        echo "Installing 1.21.11 normal: $NORMAL"
-        mvn install:install-file -Dfile="$NORMAL" -DgroupId=org.spigotmc -DartifactId=spigot -Dversion=1.21.11-R0.2-SNAPSHOT -Dpackaging=jar
+        mvn install:install-file \
+          -Dfile=Spigot/Spigot-Server/target/spigot-1.21.11-R0.2-SNAPSHOT-remapped-mojang.jar \
+          -DgroupId=org.spigotmc \
+          -DartifactId=spigot \
+          -Dversion=1.21.11-R0.2-SNAPSHOT \
+          -Dclassifier=remapped-mojang \
+          -Dpackaging=jar
+          
+        mvn install:install-file \
+          -Dfile=spigot-1.21.11.jar \
+          -DgroupId=org.spigotmc \
+          -DartifactId=spigot \
+          -Dversion=1.21.11-R0.2-SNAPSHOT \
+          -Dpackaging=jar
         
     - name: Build Project
       run: mvn clean package --batch-mode -DskipTests
