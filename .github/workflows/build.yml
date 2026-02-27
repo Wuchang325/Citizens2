@@ -26,15 +26,20 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
         
-    - name: Cache BuildTools
-      uses: actions/cache@v3
-      with:
-        path: ~/.BuildTools
-        key: buildtools-multi-version
+    - name: Prepare BuildTools Directory
+      run: |
+        mkdir -p ~/.BuildTools
+        cd ~/.BuildTools
+        if [ ! -f BuildTools.jar ]; then
+          wget -O BuildTools.jar https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
+        fi
         
     - name: Build & Install Spigot 1.21.8
       run: |
+        mkdir -p ~/.BuildTools
         cd ~/.BuildTools
+        
+        # 确保BuildTools存在
         if [ ! -f BuildTools.jar ]; then
           wget -O BuildTools.jar https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
         fi
@@ -42,7 +47,7 @@ jobs:
         # 构建
         java -jar BuildTools.jar --rev 1.21.8 --remapped
         
-        # 立即安装（remapped在target目录）
+        # 安装remapped
         mvn install:install-file \
           -Dfile=Spigot/Spigot-Server/target/spigot-1.21.8-R0.1-SNAPSHOT-remapped-mojang.jar \
           -DgroupId=org.spigotmc \
@@ -51,6 +56,7 @@ jobs:
           -Dclassifier=remapped-mojang \
           -Dpackaging=jar
           
+        # 安装normal
         mvn install:install-file \
           -Dfile=spigot-1.21.8.jar \
           -DgroupId=org.spigotmc \
@@ -60,7 +66,9 @@ jobs:
         
     - name: Build & Install Spigot 1.21.10
       run: |
+        mkdir -p ~/.BuildTools
         cd ~/.BuildTools
+        
         java -jar BuildTools.jar --rev 1.21.10 --remapped
         
         mvn install:install-file \
@@ -80,7 +88,9 @@ jobs:
         
     - name: Build & Install Spigot 1.21.11
       run: |
+        mkdir -p ~/.BuildTools
         cd ~/.BuildTools
+        
         java -jar BuildTools.jar --rev 1.21.11 --remapped
         
         mvn install:install-file \
